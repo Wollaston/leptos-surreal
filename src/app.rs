@@ -5,6 +5,8 @@ use leptos_router::*;
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::Thing;
 
+pub mod routes;
+
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
@@ -32,7 +34,9 @@ pub fn App() -> impl IntoView {
             <main>
                 <Routes>
                     <Route path="" view=HomePage/>
-                </Routes>
+                    <Route path="/bills" view=routes::bills::BillsPage/>
+                    <Route path="/bills/:id" view=routes::bills::bill::Bill/>
+               </Routes>
             </main>
         </Router>
     }
@@ -54,11 +58,13 @@ fn HomePage() -> impl IntoView {
         <button on:click=on_click>"Click Me: " {count}</button>
         <div>
             <MultiActionForm action=add_person>
-                <label>"Add a Person" <input type="text" name="title"/></label>
+                <label>"First Name" <input type="text" name="first"/></label>
+                <label>"Last Name" <input type="text" name="last"/></label>
                 <input type="submit" value="Add"/>
             </MultiActionForm>
         </div>
-        <div>            <Transition fallback=move || view! { <p>"Loading..."</p> }>
+        <div>
+            <Transition fallback=move || view! { <p>"Loading..."</p> }>
                 <ErrorBoundary fallback=|errors| {
                     view! { <ErrorTemplate errors=errors/> }
                 }>
@@ -95,7 +101,7 @@ fn HomePage() -> impl IntoView {
                             }
                         };
                     view! { <ul>{existing_people}</ul> }
-                    }};
+                    }}
                    </ErrorBoundary>
             </Transition>
     </div>
@@ -103,24 +109,18 @@ fn HomePage() -> impl IntoView {
 }
 
 #[server]
-async fn add_person() -> Result<Vec<Record>, ServerFnError> {
-    use self::ssr::db;
+async fn add_person(first: String, last: String) -> Result<Vec<Record>, ServerFnError> {
+    use crate::db::db;
     let db = db()?;
 
-    let created: Vec<Record> = db
-        .create("person")
-        .content(Person {
-            first: "Tobie".to_string(),
-            last: "Morgan Hitchcock".to_string(),
-        })
-        .await?;
+    let created: Vec<Record> = db.create("person").content(Person { first, last }).await?;
     dbg!(&created);
     Ok(created)
 }
 
 #[server]
 async fn get_people() -> Result<Vec<Person>, ServerFnError> {
-    use self::ssr::db;
+    use crate::db::db;
     let db = db()?;
 
     let people: Vec<Person> = db.select("person").await?;
@@ -139,16 +139,4 @@ pub struct Record {
 pub struct Person {
     pub first: String,
     pub last: String,
-}
-
-#[cfg(feature = "ssr")]
-pub mod ssr {
-    use leptos::*;
-    use surrealdb::engine::remote::ws::Client;
-    use surrealdb::Surreal;
-
-    pub fn db() -> Result<Surreal<Client>, ServerFnError> {
-        use_context::<Surreal<Client>>()
-            .ok_or_else(|| ServerFnError::ServerError("Pool missing.".into()))
-    }
 }
