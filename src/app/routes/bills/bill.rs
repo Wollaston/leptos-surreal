@@ -1,56 +1,54 @@
 use leptos::*;
-use leptos_router::use_params_map;
+use leptos_router::use_params;
+use leptos_router::Params;
 use serde::{Deserialize, Serialize};
 
 #[component]
 pub fn Bill() -> impl IntoView {
-    let params = use_params_map();
-    let bill_number = move || {
-        params
-            .with(|params| params.get("id").cloned())
-            .unwrap_or("Error loading Bill Number.".to_string())
-    };
+    let params = use_params::<BillParams>();
+
     let bill = create_resource(
-        move || params().get("id").cloned().unwrap_or_default(),
-        move |id| async move { get_bill(id).await },
+        move || params.get().unwrap(),
+        |bill_params| async move { get_bill(bill_params.bill_type, bill_params.bill_number).await },
     );
 
     view! {
         <div>
-            <h1>"Specific Bill"</h1>
-            <h1>{bill_number}</h1>
             <Transition fallback=move || view! { <p>"Loading..."</p> }>
                 {move || match bill.get() {
                     None => {
-                        view! { <h1>"No Bill Found."</h1>
+                        view! { <h1>"No Bill to Load"</h1>
                         }.into_view()
                     }
                     Some(bill) => match bill {
-                        Err(e) => {
-                            view! {
-                                <pre class="error">"Server Error: " {e.to_string()}</pre>
-                            }
-                                .into_view()
-                        }
-                        Ok(bill) => {
-                            view! { <h1>{bill.title}</h1> }
-                        }.into_view()
-                    }
-                }}
+                        Err(e) => view!{ <h1>"Error loading bill: "{e.to_string()}</h1> }.into_view(),
+                        Ok(bill) => view! {
+                            <h1>"Specific Bill"</h1>
+                            <h1>{bill.title}</h1>
+                            }.into_view()
+                    }}}
             </Transition>
-        </div>
+            </div>
     }
 }
 
+#[derive(Params, PartialEq, Eq, Clone)]
+pub struct BillParams {
+    bill_type: String,
+    bill_number: String,
+}
+
 #[server]
-async fn get_bill(bill_number: String) -> Result<Bill, ServerFnError> {
+async fn get_bill(bill_type: String, bill_number: String) -> Result<Bill, ServerFnError> {
     let client = reqwest::Client::new();
     let token = dotenvy_macro::dotenv!("CONGRESS_GOV_API_TOKEN");
 
     let res = client
         .get(format!(
-            "https://api.congress.gov/v3/bill/117/hr/{}?format=json&api_key={}",
-            bill_number, token
+            "https://api.congress.gov/v3/bill/118/{}/{}?format=json&api_key={}",
+            bill_type.to_lowercase(),
+            bill_number,
+            token
         ))
         .send()
         .await?
