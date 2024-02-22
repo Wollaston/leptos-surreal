@@ -17,6 +17,7 @@ pub fn HomePage() -> impl IntoView {
     // list of people is loaded from the server in reaction to changes
     let people = create_resource(move || (add_person.version().get()), move |_| get_people());
     view! {
+    <div class="bg-slate-100">
         <h1 class="text-blue-700 text-2xl">"Welcome to Leptos!"</h1>
         <button on:click=on_click>"Click Me: " {count}</button>
         <div>
@@ -67,6 +68,7 @@ pub fn HomePage() -> impl IntoView {
                     }}
                    </ErrorBoundary>
             </Transition>
+        </div>
     </div>
     }
 }

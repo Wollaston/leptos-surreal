@@ -31,7 +31,7 @@ pub fn App() -> impl IntoView {
             }
             .into_view()
         }>
-            <main class="flex flex-col h-screen">
+            <main class="flex flex-col h-screen bg-slate-100">
                 <Navbar/>
                 <div class="flex-1">
                     <Routes>

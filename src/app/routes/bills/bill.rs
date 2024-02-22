@@ -13,7 +13,7 @@ pub fn Bill() -> impl IntoView {
     );
 
     view! {
-        <div>
+        <div class="bg-slate-100">
             <Transition fallback=move || view! { <p>"Loading..."</p> }>
                 {move || match bill.get() {
                     None => {
@@ -28,7 +28,7 @@ pub fn Bill() -> impl IntoView {
                             }.into_view()
                     }}}
             </Transition>
-            </div>
+        </div>
     }
 }
 

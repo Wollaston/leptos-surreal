@@ -1,5 +1,4 @@
 use leptos::*;
-use rss::Channel;
 use serde::{Deserialize, Serialize};
 
 #[component]
@@ -27,6 +26,8 @@ pub fn BillsFeed() -> impl IntoView {
 
 #[server]
 async fn get_bills_feed() -> Result<Vec<BillItem>, ServerFnError> {
+    use rss::Channel;
+
     let content = reqwest::get("https://www.govinfo.gov/rss/bills.xml")
         .await?
         .bytes()
