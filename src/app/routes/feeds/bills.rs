@@ -1,5 +1,9 @@
 use leptos::*;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
+
+use crate::domain::bills::BillType;
 
 #[component]
 pub fn BillsFeed() -> impl IntoView {
@@ -11,18 +15,56 @@ pub fn BillsFeed() -> impl IntoView {
             <Transition
                 fallback=move || view! { <p>"Loading..."</p> }
             >
+                <ul>
                 {move || match items.get() {
                     None => view! { <h1>"No items found in Feed."</h1> }.into_view(),
                     Some(Err(_)) => view! { <p>"Error loading feed."</p> }.into_view(),
                     Some(Ok(items)) => {
                         {items.into_iter()
-                            .map(|item| view! { <li>{item.title}</li>})
+                            .map(|bill| view! { <BillsFeedCard bill/> })
                             .collect_view()}                }
                             }}
+                </ul>
             </Transition>
         </div>
     }
 }
+
+#[component]
+fn BillsFeedCard(bill: BillItem) -> impl IntoView {
+    view! {
+            <ErrorBoundary
+                // the fallback receives a signal containing current errors
+                fallback=|_| view! {
+                    <li class="bg-slate-500 text-blue-700 p-4 m-4">
+                        <p>"Error loading item."</p>
+                    </li>
+                }
+            >
+                <li class="bg-slate-500 text-blue-700 p-4 m-4">
+                    <h1>{bill.bill_type}" "{bill.bill_number}" ("{bill.bill_version}")"</h1>
+                    <p>{bill.title}</p>
+                </li>
+         </ErrorBoundary>
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum FeedErrors {
+    ParseError,
+    MatchError,
+}
+
+impl Display for FeedErrors {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FeedErrors::ParseError => write!(f, "Error parsing Bill Number."),
+            FeedErrors::MatchError => write!(f, "Error matching Bill Type."),
+        }
+    }
+}
+
+impl std::error::Error for FeedErrors {}
 
 #[server]
 async fn get_bills_feed() -> Result<Vec<BillItem>, ServerFnError> {
@@ -38,22 +80,69 @@ async fn get_bills_feed() -> Result<Vec<BillItem>, ServerFnError> {
         .into_iter()
         .map(|item| {
             let title = item.title.unwrap_or("No title found for Bill.".to_string());
-            let escaped_title = html_escape::decode_html_entities(title.as_str());
-            BillItem {
-                title: escaped_title.into(),
-            }
+            let escaped_title = htmlize::unescape(title);
+            let bill_item = parse_bill_item(escaped_title.as_ref());
+            bill_item
         })
         .collect();
 
     Ok(bill_items)
 }
 
+fn parse_bill_item(input: &str) -> BillItem {
+    println!("{:?}", input);
+    let re = Regex::new(
+        r"(?<bill_type>[a-zA-Z. ]+)( |\u{a0})(?<bill_number>\d+)( |\u{a0})\((?<bill_version>\w+)\) - (?<title>.*$)",
+    )
+    .unwrap();
+    let caps = re.captures(input).unwrap();
+    let bill_type = match caps["bill_type"]
+        .replace(['.', ' '], "")
+        .to_uppercase()
+        .as_str()
+    {
+        "HR" => Ok(BillType::HR),
+        "S" => Ok(BillType::S),
+        "HRES" => Ok(BillType::HRES),
+        "SRES" => Ok(BillType::SRES),
+        "HJRES" => Ok(BillType::HJRES),
+        "SJRES" => Ok(BillType::SJRES),
+        "HCONRES" => Ok(BillType::HCONRES),
+        "SCONRES" => Ok(BillType::SCONRES),
+        _ => Err(FeedErrors::MatchError),
+    };
+    let bill_number = caps["bill_number"]
+        .parse::<i32>()
+        .map_err(|_| FeedErrors::ParseError);
+    let bill_version = caps["bill_version"].to_string();
+    let title = caps["title"].to_string();
+    BillItem {
+        bill_type,
+        bill_number,
+        bill_version,
+        title,
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BillItem {
+    bill_type: Result<BillType, FeedErrors>,
+    bill_number: Result<i32, FeedErrors>,
+    bill_version: String,
     title: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BillItems {
     bills: Vec<BillItem>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bill_type_parsing() {
+        let input = "H.R. 7261 (IH) - Reimagining Inclusive Arts Education Act";
+    }
 }
