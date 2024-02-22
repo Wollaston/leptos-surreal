@@ -1,8 +1,12 @@
-use crate::error_template::{AppError, ErrorTemplate};
+use crate::{
+    app::components::{footer::Footer, navbar::Navbar},
+    error_template::{AppError, ErrorTemplate},
+};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
+pub mod components;
 pub mod routes;
 
 #[component]
@@ -27,12 +31,20 @@ pub fn App() -> impl IntoView {
             }
             .into_view()
         }>
-            <main>
-                <Routes>
-                    <Route path="" view=routes::home::HomePage/>
-                    <Route path="/bills" view=routes::bills::BillsPage/>
-                    <Route path="/bills/:bill_type/:bill_number" view=routes::bills::bill::Bill/>
-               </Routes>
+            <main class="flex flex-col h-screen bg-slate-100">
+                <Navbar/>
+                <div class="flex-1">
+                    <Routes>
+                        <Route path="" view=routes::home::HomePage/>
+                        <Route path="/bills" view=routes::bills::BillsPage/>
+                        <Route path="/bills/:bill_type/:bill_number" view=routes::bills::bill::Bill/>
+                        <Route path="/feeds" view=routes::feeds::Feeds>
+                            <Route path="" view=routes::feeds::main::FeedsPage/>
+                            <Route path="/bills" view=routes::feeds::bills::BillsFeed/>
+                        </Route>
+                    </Routes>
+                </div>
+                <Footer/>
             </main>
         </Router>
     }
