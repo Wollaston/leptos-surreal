@@ -17,6 +17,8 @@ pub fn App() -> impl IntoView {
     view! {
         // injects a stylesheet into the document <head>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
+        <Stylesheet href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+        <Script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"/>
         <Stylesheet id="leptos" href="/pkg/congress-gov-surrealdb.css"/>
 
         // sets the document title
@@ -42,6 +44,7 @@ pub fn App() -> impl IntoView {
                             <Route path="" view=routes::feeds::main::FeedsPage/>
                             <Route path="/bills" view=routes::feeds::bills::BillsFeed/>
                         </Route>
+                        <Route path="/maps" view=routes::maps::MapPage/>
                     </Routes>
                 </div>
                 <Footer/>

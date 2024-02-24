@@ -34,6 +34,7 @@ rss = { version = "2.0.7", features = ["serde"] }
 regex = "1.10.3"
 htmlize = { version = "1", features = ["unescape"] }
 anyhow = "1.0.80"
+leptos-leaflet = { path = "../leptos-leaflet/leptos-leaflet" }
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
